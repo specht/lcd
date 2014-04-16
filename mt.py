@@ -11,12 +11,17 @@ from select import select
 from fcntl import ioctl
 from mpd import MPDClient
 
-HOST = '192.168.106.45'
+HOST = 'localhost'
 
 mpd = MPDClient()
 mpd.timeout = 10
 mpd.idletimeout = None
-mpd.connect(HOST, 6600)
+while True:
+    try:
+        mpd.connect(HOST, 6600)
+        break
+    except:
+        print("Trying again...")
 
 #print("\n".join(dir(mpd)))
 #print(mpd.status())
