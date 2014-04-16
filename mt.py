@@ -210,7 +210,7 @@ def input_handler():
                                 mouse_movement = [axis, delta]
                                 mouse_movement_lock.release()
                             
-        except OSError:
+        except:
             print("Darn!")
             time.sleep(5.0)
         
@@ -221,148 +221,152 @@ def output_handler():
     playlists = []
     playlists_index = 0
     while True:
-        global mouse_movement, launch_playlist, store_playlist, hotkey_map, menu_showing
-        # -----------------------------------------
-        mpd_lock.acquire()
-        playlist_entries = len(mpd.playlist())
-        current_song = copy.copy(mpd.currentsong())
-        status = mpd.status()
-        mpd_lock.release()
-        # -----------------------------------------
-        artist = ''
-        album = ''
-        pos = ''
-        title = ''
-        name = ''
-        tfile = ''
-        if 'artist' in current_song:
-            artist = current_song['artist']
-        if 'album' in current_song:
-            album = current_song['album']
-        if 'pos' in current_song:
-            pos = current_song['pos']
-        if 'title' in current_song:
-            title = current_song['title']
-        if 'name' in current_song:
-            name = current_song['name']
-        if 'file' in current_song:
-            tfile = current_song['file']
-        
-        if len(current_song) > 0:
-            if album == '' and artist == '':
-                scroller.set_line(0, name, tfile)
-            else:
-                if artist != '':
-                    if album != '':
-                        scroller.set_line(0, artist + ': ' + album, tfile)
-                    else:
-                        scroller.set_line(0, artist, tfile)
-                
-            line2 = title
-            if playlist_entries > 1 and pos != '':
-                line2 = str(int(pos) + 1) + '. ' + line2
-                
-            scroller.set_line(1, line2, tfile)
-        else:
-            scroller.clear()
-            
-        scroller.set_paused(status['state'] == 'pause')
-        elapsed = ''
-        if 'elapsed' in status:
-            elapsed = float(status['elapsed'])
-            minutes = int(elapsed // 60)
-            seconds = int(elapsed - minutes * 60)
-            elapsed = "%d:%02d" % (minutes, seconds)
-        scroller.set_elapsed(elapsed)
-            
-        #scroller.set_line(0, 'ABCD (E) FGHIJKLMNOPQRSTUVWXYZ')
-        #scroller.set_line(1, '-> Eule findet den Beat')
-        
-        mouse_movement_lock.acquire()
-        current_movement = copy.copy(mouse_movement)
-        mouse_movement = [0, 0]
-        mouse_movement_lock.release()
-        
-        if current_movement[1] != 0:
-            last_mouse_movement = datetime.datetime.now()
-            
-        this_show_menu = ((datetime.datetime.now() - last_mouse_movement).seconds < 5)
-        if last_show_menu == False and this_show_menu == True:
-            # ----------------------------------------
+        try:
+            global mouse_movement, launch_playlist, store_playlist, hotkey_map, menu_showing
+            # -----------------------------------------
             mpd_lock.acquire()
-            playlists = sorted([x['playlist'] for x in mpd.listplaylists()])
+            playlist_entries = len(mpd.playlist())
+            current_song = copy.copy(mpd.currentsong())
+            status = mpd.status()
             mpd_lock.release()
-            # ----------------------------------------
-            if len(playlists) > 0:
-                playlists_index = 0
-                current_movement = [0, 0]
-            else:
-                this_show_menu = False
-        last_show_menu = this_show_menu
-        menu_showing_lock.acquire()
-        menu_showing = this_show_menu
-        menu_showing_lock.release()
-
-        launch_playlist_lock.acquire()
-        this_launch_playlist = launch_playlist
-        launch_playlist = False
-        launch_playlist_lock.release()
-        
-        store_playlist_lock.acquire()
-        this_store_playlist = store_playlist
-        store_playlist = None
-        store_playlist_lock.release()
-        
-        if this_show_menu:
-            if current_movement[1] != 0:
-                if current_movement[0] == 1:
-                    playlists_index = (playlists_index + len(playlists) + current_movement[1]) % len(playlists)
-                elif current_movement[0] == 0:
-                    first_letter = playlists[playlists_index][0].lower()
-                    this_first_letter = first_letter
-                    # skip to another letter
-                    while first_letter == this_first_letter:
-                        playlists_index = (playlists_index + len(playlists) + current_movement[1]) % len(playlists)
-                        first_letter = playlists[playlists_index][0].lower()
-                    # skip to first entry with this letter
-                    while True:
-                        temp_playlists_index = (playlists_index + len(playlists) - 1) % len(playlists)
-                        test_letter = playlists[temp_playlists_index][0].lower()
-                        if test_letter != first_letter:
-                            break
+            # -----------------------------------------
+            artist = ''
+            album = ''
+            pos = ''
+            title = ''
+            name = ''
+            tfile = ''
+            if 'artist' in current_song:
+                artist = current_song['artist']
+            if 'album' in current_song:
+                album = current_song['album']
+            if 'pos' in current_song:
+                pos = current_song['pos']
+            if 'title' in current_song:
+                title = current_song['title']
+            if 'name' in current_song:
+                name = current_song['name']
+            if 'file' in current_song:
+                tfile = current_song['file']
+            
+            if len(current_song) > 0:
+                if album == '' and artist == '':
+                    scroller.set_line(0, name, tfile)
+                else:
+                    if artist != '':
+                        if album != '':
+                            scroller.set_line(0, artist + ': ' + album, tfile)
                         else:
-                            playlists_index = temp_playlists_index
+                            scroller.set_line(0, artist, tfile)
+                    
+                line2 = title
+                if playlist_entries > 1 and pos != '':
+                    line2 = str(int(pos) + 1) + '. ' + line2
+                    
+                scroller.set_line(1, line2, tfile)
+            else:
+                scroller.clear()
                 
-            letters = ''.join([chr(x + 65) for x in range(26)])
-            letter_index = ord(playlists[playlists_index][0].lower()) - ord('a')
-            if letter_index not in range(26):
-                letters += '?'
-                letter_index = 26
-            letters = letters[:letter_index] + ' [' + letters[letter_index] + '] ' + letters[(letter_index + 1):]
-            letters = ' ~=] ' + letters + ' [=~'
+            scroller.set_paused(status['state'] == 'pause')
+            elapsed = ''
+            if 'elapsed' in status:
+                elapsed = float(status['elapsed'])
+                minutes = int(elapsed // 60)
+                seconds = int(elapsed - minutes * 60)
+                elapsed = "%d:%02d" % (minutes, seconds)
+            scroller.set_elapsed(elapsed)
+                
+            #scroller.set_line(0, 'ABCD (E) FGHIJKLMNOPQRSTUVWXYZ')
+            #scroller.set_line(1, '-> Eule findet den Beat')
             
-            scroller.set_line(0, letters)
-            scroller.set_line(1, '==[ ' + playlists[playlists_index], playlists[playlists_index])
+            mouse_movement_lock.acquire()
+            current_movement = copy.copy(mouse_movement)
+            mouse_movement = [0, 0]
+            mouse_movement_lock.release()
             
-            if this_launch_playlist:
+            if current_movement[1] != 0:
+                last_mouse_movement = datetime.datetime.now()
+                
+            this_show_menu = ((datetime.datetime.now() - last_mouse_movement).seconds < 5)
+            if last_show_menu == False and this_show_menu == True:
+                # ----------------------------------------
                 mpd_lock.acquire()
-                mpd.clear()
-                mpd.load(playlists[playlists_index])
-                mpd.play()
+                playlists = sorted([x['playlist'] for x in mpd.listplaylists()])
                 mpd_lock.release()
-                last_mouse_movement = datetime.datetime(1970, 1, 1)
-                
-            if this_store_playlist != None:
-                hotkey_map_lock.acquire()
-                hotkey_map[this_store_playlist] = playlists[playlists_index]
-                save_hotkeys()
-                hotkey_map_lock.release()
+                # ----------------------------------------
+                if len(playlists) > 0:
+                    playlists_index = 0
+                    current_movement = [0, 0]
+                else:
+                    this_show_menu = False
+            last_show_menu = this_show_menu
+            menu_showing_lock.acquire()
+            menu_showing = this_show_menu
+            menu_showing_lock.release()
+
+            launch_playlist_lock.acquire()
+            this_launch_playlist = launch_playlist
+            launch_playlist = False
+            launch_playlist_lock.release()
             
-        scroller.render()
-        scroller.animate()
-        
-        #print(current_song)
+            store_playlist_lock.acquire()
+            this_store_playlist = store_playlist
+            store_playlist = None
+            store_playlist_lock.release()
+            
+            if this_show_menu:
+                if current_movement[1] != 0:
+                    if current_movement[0] == 1:
+                        playlists_index = (playlists_index + len(playlists) + current_movement[1]) % len(playlists)
+                    elif current_movement[0] == 0:
+                        first_letter = playlists[playlists_index][0].lower()
+                        this_first_letter = first_letter
+                        # skip to another letter
+                        while first_letter == this_first_letter:
+                            playlists_index = (playlists_index + len(playlists) + current_movement[1]) % len(playlists)
+                            first_letter = playlists[playlists_index][0].lower()
+                        # skip to first entry with this letter
+                        while True:
+                            temp_playlists_index = (playlists_index + len(playlists) - 1) % len(playlists)
+                            test_letter = playlists[temp_playlists_index][0].lower()
+                            if test_letter != first_letter:
+                                break
+                            else:
+                                playlists_index = temp_playlists_index
+                    
+                letters = ''.join([chr(x + 65) for x in range(26)])
+                letter_index = ord(playlists[playlists_index][0].lower()) - ord('a')
+                if letter_index not in range(26):
+                    letters += '?'
+                    letter_index = 26
+                letters = letters[:letter_index] + ' [' + letters[letter_index] + '] ' + letters[(letter_index + 1):]
+                letters = ' ~=] ' + letters + ' [=~'
+                
+                scroller.set_line(0, letters)
+                scroller.set_line(1, '==[ ' + playlists[playlists_index], playlists[playlists_index])
+                
+                if this_launch_playlist:
+                    mpd_lock.acquire()
+                    mpd.clear()
+                    mpd.load(playlists[playlists_index])
+                    mpd.play()
+                    mpd_lock.release()
+                    last_mouse_movement = datetime.datetime(1970, 1, 1)
+                    
+                if this_store_playlist != None:
+                    hotkey_map_lock.acquire()
+                    hotkey_map[this_store_playlist] = playlists[playlists_index]
+                    save_hotkeys()
+                    hotkey_map_lock.release()
+                
+            scroller.render()
+            scroller.animate()
+            
+            #print(current_song)
+        except:
+            pass
         time.sleep(0.1)
+            
 
 for x in [input_handler, output_handler]:
 #for x in [output_handler]:
