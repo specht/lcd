@@ -1,17 +1,23 @@
 #!/usr/bin/env python
 
+# http://www.soundjay.com/button-sounds-1.html
+
 import copy
 import datetime
 import threading
 import time
 import json
+import os
+import string
+import sys
 from scroller import Scroller
-from evdev import InputDevice, categorize, ecodes
+from evdev import InputDevice, categorize, ecodes, events
 from select import select
 from fcntl import ioctl
 from mpd import MPDClient
 
 HOST = 'localhost'
+
 
 mpd = MPDClient()
 mpd.timeout = 10
@@ -25,24 +31,28 @@ while True:
 
 #print("\n".join(dir(mpd)))
 #print(mpd.status())
+#print(mpd.list('album', 'Tocotronic'))
 #exit(0)
     
 mpd_lock = threading.Lock()
 
+playlists = []
+playlists_index = 0
 mouse_movement = [0, 0]
 mouse_movement_lock = threading.Lock()
 
 launch_playlist = False
 launch_playlist_lock = threading.Lock()
 
-store_playlist = None
-store_playlist_lock = threading.Lock()
-
-menu_showing = False
+menu_showing = None
+last_menu_showing = None
 menu_showing_lock = threading.Lock()
 
 hotkey_map = {}
 hotkey_map_lock = threading.Lock()
+
+hotkey_down = {}
+store_next_hotkey = False
 
 def load_hotkeys():
     global hotkey_map
@@ -74,70 +84,119 @@ def seekcur(delta):
         if newpos < 0:
             newpos = 0
         mpd.seekid(status['songid'], newpos)
+        
+def cycle_menu_showing(force = None):
+    global playlists, playlists_index, menu_showing, mpd
     
-def handle_keys(tag):
-    global last_volume, launch_playlist, hotkeys, menu_showing, hotkey_map, store_playlist
-    if tag == 'KEY_STOPCD':
-        mpd.clear()
-    elif tag == 'KEY_PLAYPAUSE':
-        mpd.pause()
-    elif tag == 'KEY_PREVIOUSSONG':
-        status = mpd.status()
-        if 'elapsed' in status:
-            pos = int(float(status['elapsed']))
-            if pos < 2:
-                mpd.previous()
-            else:
-                mpd.seekid(status['songid'], 0)
+    menu_showing_lock.acquire()
+    if force == None:
+        if menu_showing == None:
+            menu_showing = 'playlist'
+        elif menu_showing == 'playlist':
+            menu_showing = 'artist'
+        elif menu_showing == 'artist':
+            menu_showing = 'album'
+        elif menu_showing == 'album':
+            menu_showing = 'playlist'
+        elif menu_showing[0:13] == 'artist-album-':
+            menu_showing = 'album'
+    else:
+        menu_showing = force
+    menu_showing_lock.release()
+    # ----------------------------------------
+    # mpd_lock is already acquire()
+    items = []
+    if menu_showing == 'playlist':
+        items = [x['playlist'] for x in mpd.listplaylists()]
+    elif menu_showing == 'artist':
+        items = mpd.list('artist')
+    elif menu_showing == 'album':
+        items = mpd.list('album')
+    elif menu_showing[0:13] == 'artist-album-':
+        items = mpd.list('album', menu_showing[13:])
+        items.append('(all titles)')
+    # mpd_lock is already release()'d
+    # ----------------------------------------
+    items = [x for x in items if len(x) > 0]
+    if len(items) == 0:
+        items.append('(none)')
+    playlists = sorted(items, cmp = sorter)
+    playlists_index = 0
+    
+def handle_keys(tag, state):
+    global last_volume, launch_playlist, hotkeys, menu_showing, hotkey_map, hotkey_down, store_next_hotkey
+    if tag == 'KEY_ENTER':
+        if state == events.KeyEvent.key_down:
+            hotkey_down[tag] = datetime.datetime.now()
+        elif state == events.KeyEvent.key_hold:
+            if tag in hotkey_down:
+                delta = (datetime.datetime.now() - hotkey_down[tag]).seconds
+                if delta >= 1:
+                    os.system("aplay button-30.wav")
+                    store_next_hotkey = True
+                    del hotkey_down[tag]
+    elif tag in hotkeys and state == events.KeyEvent.key_down:
+        if store_next_hotkey:
+            os.system("aplay button-17.wav")
+            store_next_hotkey = False
+            playlist = []
+            for entry in mpd.playlistinfo():
+                playlist.append(entry['file'])
+                hotkey_map_lock.acquire()
+                hotkey_map[tag] = playlist
+                save_hotkeys()
+                hotkey_map_lock.release()
         else:
-            mpd.previous()
-                
-    elif tag == 'KEY_NEXTSONG':
-        status = mpd.status()
-        if 'song' in status:
-            if int(status['song']) < int(status['playlistlength']) - 1:
-                mpd.next()
-    elif tag == 'KEY_LEFTSHIFT/KEY_LEFTCTRL/KEY_B':
-        seekcur(-5)
-    elif tag == 'KEY_LEFTSHIFT/KEY_LEFTCTRL/KEY_F':
-        seekcur(5)
-    elif tag == 'KEY_VOLUMEDOWN':
-        last_volume = max(int(mpd.status()['volume']) - 2, 0)
-        mpd.setvol(last_volume)
-    elif tag == 'KEY_VOLUMEUP':
-        last_volume = min(int(mpd.status()['volume']) + 2, 100)
-        mpd.setvol(last_volume)
-    elif tag == 'KEY_MUTE':
-        if int(mpd.status()['volume']) == 0:
-            mpd.setvol(last_volume)
-        else:
-            mpd.setvol(0)
-    elif tag == 'BTN_LEFT':
-        # if we're in choose playlist mode, launch this playlist
-        launch_playlist_lock.acquire()
-        launch_playlist = True
-        launch_playlist_lock.release()
-    elif tag in hotkeys:
-        menu_showing_lock.acquire()
-        this_menu_showing = menu_showing
-        menu_showing_lock.release()
-        if this_menu_showing:
-            store_playlist_lock.acquire()
-            store_playlist = tag
-            store_playlist_lock.release()
-        else:
-            # look up stored playlist name and try to play it
             hotkey_map_lock.acquire()
             if tag in hotkey_map:
-                try:
-                    info = mpd.listplaylistinfo(hotkey_map[tag])
-                    mpd.clear()
-                    mpd.load(hotkey_map[tag])
-                    mpd.play()
-                except:
-                    del hotkey_map[tag]
-                    save_hotkeys()
+                mpd.clear()
+                for item in hotkey_map[tag]:
+                    mpd.add(item)
+                mpd.play()
             hotkey_map_lock.release()
+    elif state == events.KeyEvent.key_down or state == events.KeyEvent.key_hold:
+        if tag == 'KEY_STOPCD':
+            mpd.clear()
+        elif tag == 'KEY_PLAYPAUSE':
+            mpd.pause()
+        elif tag == 'KEY_PREVIOUSSONG':
+            status = mpd.status()
+            if 'elapsed' in status:
+                pos = int(float(status['elapsed']))
+                if pos < 2:
+                    mpd.previous()
+                else:
+                    mpd.seekid(status['songid'], 0)
+            else:
+                mpd.previous()
+                    
+        elif tag == 'KEY_NEXTSONG':
+            status = mpd.status()
+            if 'song' in status:
+                if int(status['song']) < int(status['playlistlength']) - 1:
+                    mpd.next()
+        elif tag == 'KEY_LEFTSHIFT/KEY_LEFTCTRL/KEY_B':
+            seekcur(-5)
+        elif tag == 'KEY_LEFTSHIFT/KEY_LEFTCTRL/KEY_F':
+            seekcur(5)
+        elif tag == 'KEY_VOLUMEDOWN':
+            last_volume = max(int(mpd.status()['volume']) - 2, 0)
+            mpd.setvol(last_volume)
+        elif tag == 'KEY_VOLUMEUP':
+            last_volume = min(int(mpd.status()['volume']) + 2, 100)
+            mpd.setvol(last_volume)
+        elif tag == 'KEY_MUTE':
+            if int(mpd.status()['volume']) == 0:
+                mpd.setvol(last_volume)
+            else:
+                mpd.setvol(0)
+        elif tag == 'BTN_LEFT':
+            # if we're in choose playlist mode, launch this playlist
+            launch_playlist_lock.acquire()
+            launch_playlist = True
+            launch_playlist_lock.release()
+        elif tag == 'BTN_RIGHT':
+            cycle_menu_showing()
         
 def input_handler():
     
@@ -172,22 +231,21 @@ def input_handler():
                                 elif data.keystate == data.key_up:
                                     modifier_state[data.keycode] = False
                             else:
-                                if data.keystate == data.key_down or data.keystate == data.key_hold:
-                                    keycode = data.keycode
-                                    if type(keycode) != list:
-                                        keycode = [keycode]
-                                    for k in keycode:
-                                        tag = '/'.join([x for x in MODIFIERS if modifier_state[x]] + [k])
-                                        # -----------------------------------------
-                                        mpd_lock.acquire()
-                                        try:
-                                            handle_keys(tag)
-                                        except:
-                                            raise
-                                            pass
-                                        finally:
-                                            mpd_lock.release()
-                                        # -----------------------------------------
+                                keycode = data.keycode
+                                if type(keycode) != list:
+                                    keycode = [keycode]
+                                for k in keycode:
+                                    tag = '/'.join([x for x in MODIFIERS if modifier_state[x]] + [k])
+                                    # -----------------------------------------
+                                    mpd_lock.acquire()
+                                    try:
+                                        handle_keys(tag, data.keystate)
+                                    except:
+                                        raise
+                                        pass
+                                    finally:
+                                        mpd_lock.release()
+                                    # -----------------------------------------
                         elif event.type == ecodes.EV_REL:
                             axis = event.code
                             delta = event.value
@@ -212,17 +270,34 @@ def input_handler():
                             
         except:
             print("Darn!")
+            raise
             time.sleep(5.0)
+            
+def sorter(a, b):
+    a = a.lower()
+    b = b.lower()
+    a_alpha = a[0] in string.ascii_lowercase
+    b_alpha = b[0] in string.ascii_lowercase
+    if a_alpha != b_alpha:
+        if a_alpha == True and b_alpha == False:
+            return -1
+        elif a_alpha == False and b_alpha == True:
+            return 1
+    else:
+        if a < b:
+            return -1
+        elif a > b:
+            return 1
+        else:
+            return 0
         
 def output_handler():
     scroller = Scroller()
     last_mouse_movement = datetime.datetime(1970, 1, 1)
     last_show_menu = False
-    playlists = []
-    playlists_index = 0
     while True:
         try:
-            global mouse_movement, launch_playlist, store_playlist, hotkey_map, menu_showing
+            global mouse_movement, launch_playlist, hotkey_map, menu_showing, last_menu_showing, playlists, playlists_index
             # -----------------------------------------
             mpd_lock.acquire()
             playlist_entries = len(mpd.playlist())
@@ -266,8 +341,9 @@ def output_handler():
                 scroller.set_line(1, line2, tfile)
             else:
                 scroller.clear()
-                
-            scroller.set_paused(status['state'] == 'pause')
+            
+            if 'state' in status:    
+                scroller.set_paused(status['state'] == 'pause')
             elapsed = ''
             if 'elapsed' in status:
                 elapsed = float(status['elapsed'])
@@ -284,35 +360,33 @@ def output_handler():
             mouse_movement = [0, 0]
             mouse_movement_lock.release()
             
+            menu_showing_lock.acquire()
             if current_movement[1] != 0:
                 last_mouse_movement = datetime.datetime.now()
+            else:
+                if (menu_showing != None) and (menu_showing != last_menu_showing):
+                    last_mouse_movement = datetime.datetime.now()
+            last_menu_showing = menu_showing
+            menu_showing_lock.release()
                 
             this_show_menu = ((datetime.datetime.now() - last_mouse_movement).seconds < 5)
+            if last_show_menu == True and this_show_menu == False:
+                menu_showing_lock.acquire()
+                menu_showing = None
+                menu_showing_lock.release()
+                
             if last_show_menu == False and this_show_menu == True:
-                # ----------------------------------------
                 mpd_lock.acquire()
-                playlists = sorted([x['playlist'] for x in mpd.listplaylists()])
+                cycle_menu_showing()
                 mpd_lock.release()
-                # ----------------------------------------
-                if len(playlists) > 0:
-                    playlists_index = 0
-                    current_movement = [0, 0]
-                else:
-                    this_show_menu = False
+                current_movement = [0, 0]
+                
             last_show_menu = this_show_menu
-            menu_showing_lock.acquire()
-            menu_showing = this_show_menu
-            menu_showing_lock.release()
 
             launch_playlist_lock.acquire()
             this_launch_playlist = launch_playlist
             launch_playlist = False
             launch_playlist_lock.release()
-            
-            store_playlist_lock.acquire()
-            this_store_playlist = store_playlist
-            store_playlist = None
-            store_playlist_lock.release()
             
             if this_show_menu:
                 if current_movement[1] != 0:
@@ -334,36 +408,66 @@ def output_handler():
                             else:
                                 playlists_index = temp_playlists_index
                     
-                letters = ''.join([chr(x + 65) for x in range(26)])
+                letters = ''.join([chr(x + 65) for x in range(26)]) + '?'
                 letter_index = ord(playlists[playlists_index][0].lower()) - ord('a')
                 if letter_index not in range(26):
-                    letters += '?'
                     letter_index = 26
                 letters = letters[:letter_index] + ' [' + letters[letter_index] + '] ' + letters[(letter_index + 1):]
                 letters = ' ~=] ' + letters + ' [=~'
                 
                 scroller.set_line(0, letters)
-                scroller.set_line(1, '==[ ' + playlists[playlists_index], playlists[playlists_index])
+                line2 = playlists[playlists_index]
+                menu_showing_lock.acquire()
+                if menu_showing == 'artist':
+                    line2 = '[Artist] ' + line2
+                elif menu_showing == 'album':
+                    line2 = '[Album] ' + line2
+                elif menu_showing[0:13] == 'artist-album-':
+                    line2 = '[Album] ' + line2
+                menu_showing_lock.release()
+                scroller.set_line(1, line2, line2)
                 
                 if this_launch_playlist:
+                    menu_showing_lock.acquire()
+                    previous_menu_showing = menu_showing
+                    menu_showing = None
+                    menu_showing_lock.release()
+
                     mpd_lock.acquire()
-                    mpd.clear()
-                    mpd.load(playlists[playlists_index])
-                    mpd.play()
+                    if previous_menu_showing == 'playlist':
+                        mpd.clear()
+                        mpd.load(playlists[playlists_index])
+                        mpd.play()
+                    elif previous_menu_showing == 'artist':
+                        cycle_menu_showing('artist-album-' + playlists[playlists_index])
+                        menu_showing_lock.acquire()
+                        last_menu_showing = None
+                        menu_showing_lock.release()
+                    elif previous_menu_showing == 'album':
+                        album = playlists[playlists_index]
+                        mpd.clear()
+                        mpd.findadd('album', album)
+                        mpd.play()
+                    elif previous_menu_showing[0:13] == 'artist-album-':
+                        artist = previous_menu_showing[13:]
+                        album = playlists[playlists_index]
+                        mpd.clear()
+                        if album == '(all titles)':
+                            mpd.findadd('artist', artist)
+                        else:
+                            mpd.findadd('artist', artist, 'album', album)
+                        mpd.play()
+                        
                     mpd_lock.release()
+
                     last_mouse_movement = datetime.datetime(1970, 1, 1)
                     
-                if this_store_playlist != None:
-                    hotkey_map_lock.acquire()
-                    hotkey_map[this_store_playlist] = playlists[playlists_index]
-                    save_hotkeys()
-                    hotkey_map_lock.release()
-                
             scroller.render()
             scroller.animate()
             
             #print(current_song)
         except:
+            raise
             pass
         time.sleep(0.1)
             

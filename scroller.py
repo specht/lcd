@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*- 
 import os
 import random
+from Adafruit_CharLCD import Adafruit_CharLCD
 
 class Scroller:
     def __init__(self):
@@ -32,6 +34,32 @@ class Scroller:
         
         self.animation_index = self.ascii_art.keys()[random.randrange(0, len(self.ascii_art))]
         self.animation_phase = 0
+
+        self.lcd = Adafruit_CharLCD()
+        self.lcd.begin(40, 2)
+        self.lcd.define_char(1, [0, 0x10, 0x08, 0x04, 0x02, 0x01, 0, 0])
+        self.current_lines = ["", ""]
+    
+    def tr(self, s):
+        result = ''.encode('latin-1')
+        for c in unicode(s, 'UTF-8'):
+            #print(c, ord(c))
+            if ord(c) == 92:
+                result += u'\x01'.encode('latin-1')
+            elif ord(c) < 128:
+                result += c.encode('latin-1')
+            elif ord(c) == 246:
+                result += u'\xef'.encode('latin-1')
+            elif ord(c) == 252:
+                result += u'\xf5'.encode('latin-1')
+            elif ord(c) == 228:
+                result += u'\xe1'.encode('latin-1')
+            elif ord(c) == 169:
+                result += '(c)'.encode('latin-1')
+            else:
+                print(c)
+                print(ord(c))
+        return result
             
     def load_ascii_art(self):
         with open('ascii-art.txt') as f:
@@ -45,6 +73,8 @@ class Scroller:
                     if len(line1) == 0:
                         break
                     line2 = f.readline().rstrip()
+                    line1 = self.tr(line1)
+                    line2 = self.tr(line2)
                     if len(line1) > len(line2):
                         line2 += ' ' * (len(line1) - len(line2))
                     if len(line2) > len(line1):
@@ -58,6 +88,7 @@ class Scroller:
         if tag == self.tag[i]:
             if self.offset[i] > 0:
                 return
+        s = self.tr(s)
         if s != self.lines[i]:
             self.lines[i] = s
             self.offset[i] = -self.wait_time
@@ -77,7 +108,7 @@ class Scroller:
         self.elapsed = elapsed
             
     def render(self):
-        os.system("clear")
+        result_lines = []
         
         if self.easter_egg_countdown > 0:
             self.easter_egg_countdown -= 1
@@ -95,7 +126,7 @@ class Scroller:
                     part = (' ' * offset) + part
                 part += ' ' * self.width
                 part = part[:self.width]
-                print(part)
+                result_lines.append(part)
                 if (offset > self.width):
                     self.easter_egg_countdown = random.randrange(self.timeoutmin, self.timeoutmax)
                     self.animation_index = self.ascii_art.keys()[random.randrange(0, len(self.ascii_art))]
@@ -127,9 +158,17 @@ class Scroller:
                         #if self.elapsed != '':
                             #cropped = cropped[:-(len(self.elapsed) + 2)]
                             #cropped += "|%s" % self.elapsed
-                    
-                print(cropped)
+
+                result_lines.append(cropped)             
                 
+        #os.system("clear")
+        #self.lcd.clear()
+        self.lcd.setCursor(0, 0)
+        for index, cropped in enumerate(result_lines):
+            #if cropped != self.current_lines[index]:
+                self.current_lines[index] = cropped
+                self.lcd.message(cropped)       
+                #print(cropped)
         
     def animate(self):
         for i in range(self.height):
