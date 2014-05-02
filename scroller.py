@@ -54,6 +54,8 @@ class Scroller:
                 result += u'\xf5'.encode('latin-1')
             elif ord(c) == 228:
                 result += u'\xe1'.encode('latin-1')
+            elif ord(c) == 223:
+                result += u'\xe2'.encode('latin-1')
             elif ord(c) == 169:
                 result += '(c)'.encode('latin-1')
             else:
