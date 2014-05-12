@@ -480,7 +480,7 @@ def output_handler():
         time.sleep(0.05)
             
 
-for x in [input_handler, output_handler]:
+for x in [input_handler, output_handler, sync_files]:
 #for x in [output_handler]:
 #for x in [input_handler]:
     t = threading.Thread(target = x)
