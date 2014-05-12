@@ -84,7 +84,8 @@ def sync_files():
     global syncing, needs_sync
     while True:
         needs_sync.wait()
-        print(hotkey_map)
+        files = [x for x in y for y in hotkey_map.values()]
+        print(files)
         print("Starting sync_files...")
         syncing = True
         time.sleep(5.0)
