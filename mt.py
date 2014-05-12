@@ -77,6 +77,13 @@ hotkeys = ['KEY_MAIL', 'KEY_HOMEPAGE', 'KEY_LEFTALT/KEY_F4',
     'KEY_LEFTALT/KEY_ENTER', 'KEY_BACKSPACE', 'KEY_PAGEUP', 'KEY_PAGEDOWN',
     'KEY_LEFTMETA/KEY_E', 'KEY_LEFTMETA/KEY_D']
 
+def sync_files():
+    #scroller.set_busy(True)
+    print("Starting sync_files...")
+    time.sleep(5.0)
+    print("Finished sync_files.")
+    #scroller.set_busy(False)
+    
 def seekcur(delta):    
     status = mpd.status()
     if 'elapsed' in status:
@@ -290,8 +297,9 @@ def sorter(a, b):
             return 1
         else:
             return 0
-        
+            
 def output_handler():
+    
     scroller = Scroller()
     last_mouse_movement = datetime.datetime(1970, 1, 1)
     last_show_menu = False
@@ -344,7 +352,6 @@ def output_handler():
             
             if 'state' in status:    
                 scroller.set_paused(status['state'] == 'pause')
-            scroller.set_busy(True)
             elapsed = ''
             if 'elapsed' in status:
                 elapsed = float(status['elapsed'])
@@ -477,9 +484,7 @@ for x in [input_handler, output_handler]:
 #for x in [output_handler]:
 #for x in [input_handler]:
     t = threading.Thread(target = x)
-    t.daemon = True
+    #t.daemon = True
     t.start()
+    t.join()
     
-while True:
-    time.sleep(1)
-
