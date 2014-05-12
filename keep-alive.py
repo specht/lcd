@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+import time
 import os
 
 while True:
     print("Launching system...")
     os.system("python mt.py")
-    sleep(1.0)
+    time.sleep(1.0)
+    
