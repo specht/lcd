@@ -182,6 +182,10 @@ def handle_keys(tag, state):
             if tag in hotkey_map:
                 mpd.clear()
                 for item in hotkey_map[tag]:
+                    cached_path = item.replace('nfs/', 'cached/')
+                    if os.path.isfile(cached_path):
+                        print("Using cached version of %s" % item)
+                        item = cached_path
                     mpd.add(item)
                 mpd.play()
             hotkey_map_lock.release()
