@@ -54,6 +54,8 @@ hotkey_map_lock = threading.Lock()
 hotkey_down = {}
 store_next_hotkey = False
 
+syncing = False
+
 def load_hotkeys():
     global hotkey_map
     try:
@@ -80,8 +82,10 @@ hotkeys = ['KEY_MAIL', 'KEY_HOMEPAGE', 'KEY_LEFTALT/KEY_F4',
 def sync_files():
     #scroller.set_busy(True)
     print("Starting sync_files...")
+    syncing = True
     time.sleep(5.0)
     print("Finished sync_files.")
+    syncing = False
     #scroller.set_busy(False)
     
 def seekcur(delta):    
@@ -352,6 +356,7 @@ def output_handler():
             
             if 'state' in status:    
                 scroller.set_paused(status['state'] == 'pause')
+            scroller.set_busy(syncing)
             elapsed = ''
             if 'elapsed' in status:
                 elapsed = float(status['elapsed'])
