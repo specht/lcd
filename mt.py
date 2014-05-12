@@ -235,7 +235,8 @@ def input_handler():
                                     mpd_lock.acquire()
                                     try:
                                         handle_keys(tag, data.keystate)
-                                    except:
+                                    except e:
+                                        print(e)
                                         raise
                                         pass
                                     finally:
