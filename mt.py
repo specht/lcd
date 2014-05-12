@@ -54,6 +54,7 @@ hotkey_map_lock = threading.Lock()
 hotkey_down = {}
 store_next_hotkey = False
 
+needs_sync = threading.Event()
 syncing = False
 
 def load_hotkeys():
@@ -80,14 +81,15 @@ hotkeys = ['KEY_MAIL', 'KEY_HOMEPAGE', 'KEY_LEFTALT/KEY_F4',
     'KEY_LEFTMETA/KEY_E', 'KEY_LEFTMETA/KEY_D']
 
 def sync_files():
-    #scroller.set_busy(True)
-    global syncing
-    print("Starting sync_files...")
-    syncing = True
-    time.sleep(5.0)
-    print("Finished sync_files.")
-    syncing = False
-    #scroller.set_busy(False)
+    global syncing, needs_sync
+    while True:
+        needs_sync.wait()
+        print("Starting sync_files...")
+        syncing = True
+        time.sleep(5.0)
+        print("Finished sync_files.")
+        syncing = False
+        needs_sync.clear()
     
 def seekcur(delta):    
     status = mpd.status()
@@ -487,11 +489,11 @@ def output_handler():
             
 
 for x in [input_handler, output_handler, sync_files]:
-#for x in [output_handler]:
-#for x in [input_handler]:
     t = threading.Thread(target = x)
     t.daemon = True
     t.start()
+    
+needs_sync.set()
     
 while True:
     time.sleep(1)
