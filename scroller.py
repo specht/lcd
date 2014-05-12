@@ -169,8 +169,10 @@ class Scroller:
         for index, cropped in enumerate(result_lines):
             #if cropped != self.current_lines[index]:
                 self.current_lines[index] = cropped
-                self.lcd.message(cropped)       
+                self.lcd.message(cropped)
+                print(cropped)
                 #print(cropped)
+        print()
         
     def animate(self):
         for i in range(self.height):
