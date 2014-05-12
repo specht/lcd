@@ -197,7 +197,8 @@ def handle_keys(tag, state):
                     print(item, cached_path)
                     sys.stdout.flush()
                     if os.path.isfile('/home/pi/music/' + cached_path):
-                        print("Using cached version of %s" % item)
+                        print("Using cached version.")
+                        #print("Using cached version of %s" % item)
                         sys.stdout.flush()
                         item = cached_path
                     mpd.add(item)
