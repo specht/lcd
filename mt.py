@@ -29,6 +29,7 @@ while True:
         break
     except:
         print("Trying again...")
+        sys.stdout.flush()
 
 #print("\n".join(dir(mpd)))
 #print(mpd.status())
@@ -90,6 +91,7 @@ def sync_files():
             for y in x:
                 files.append(y)
         print("Starting sync_files...")
+        sys.stdout.flush()
         syncing = True
         
         changed_something = False
@@ -102,6 +104,7 @@ def sync_files():
                 if not os.path.exists(dirname):
                     os.makedirs(dirname)
                 print("Caching %s..." % remote_path)
+                sys.stdout.flush()
                 shutil.copy2(remote_path, cached_path)
                 changed_something = True
                 
@@ -111,6 +114,7 @@ def sync_files():
             os.system("mpc update cache")
         
         print("Finished sync_files.")
+        sys.stdout.flush()
         syncing = False
         needs_sync.clear()
     
@@ -191,8 +195,10 @@ def handle_keys(tag, state):
                 for item in hotkey_map[tag]:
                     cached_path = item.replace('nfs/', 'cache/')
                     print(item, cached_path)
+                    sys.stdout.flush()
                     if os.path.isfile('/home/pi/music/' + cached_path):
                         print("Using cached version of %s" % item)
+                        sys.stdout.flush()
                         item = cached_path
                     mpd.add(item)
                 mpd.play()
@@ -313,6 +319,7 @@ def input_handler():
                             
         except:
             print("Darn!")
+            sys.stdout.flush()
             raise
             time.sleep(5.0)
             
