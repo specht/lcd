@@ -264,7 +264,7 @@ def input_handler():
                                 mouse_movement_lock.release()
                             
         except:
-            sys._exit(1)
+            os._exit(1)
             
 def sorter(a, b):
     a = a.lower()
@@ -460,7 +460,7 @@ def output_handler():
             
             #print(current_song)
         except:
-            sys._exit(2)
+            os._exit(2)
         time.sleep(0.1)
             
 
