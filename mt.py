@@ -484,7 +484,9 @@ for x in [input_handler, output_handler]:
 #for x in [output_handler]:
 #for x in [input_handler]:
     t = threading.Thread(target = x)
-    #t.daemon = True
+    t.daemon = True
     t.start()
-    t.join()
     
+while True:
+    time.sleep(1)
+
