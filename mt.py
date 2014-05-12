@@ -160,6 +160,7 @@ def handle_keys(tag, state):
                 hotkey_map[tag] = playlist
                 save_hotkeys()
                 hotkey_map_lock.release()
+            needs_sync.set()
         else:
             hotkey_map_lock.acquire()
             if tag in hotkey_map:
