@@ -9,6 +9,7 @@ import time
 import json
 import os
 import string
+import shutil
 import sys
 from scroller import Scroller
 from evdev import InputDevice, categorize, ecodes, events
@@ -88,10 +89,20 @@ def sync_files():
         for x in hotkey_map.values():
             for y in x:
                 files.append(y)
-        print(files)
         print("Starting sync_files...")
         syncing = True
-        time.sleep(5.0)
+        
+        for path in files:
+            remote_path = '/home/pi/music/' + path
+            cached_path = '/home/pi/music/' + path.replace('nfs/', 'cache/')
+            if not os.path.isfile(cached_path):
+                dirname = os.path.dirname(cached_path)
+                if not os.path.exists(dirname):
+                    os.makedirs(dirname)
+                print("Caching %s..." % remote_path)
+                shutil.copy2(remote_path, cached_path)
+                    
+        
         print("Finished sync_files.")
         syncing = False
         needs_sync.clear()
