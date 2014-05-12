@@ -4,4 +4,4 @@ import os
 while True:
     print("Launching system...")
     os.system("python mt.py")
-    exit(1)
+    sleep(1.0)
