@@ -344,6 +344,7 @@ def output_handler():
             
             if 'state' in status:    
                 scroller.set_paused(status['state'] == 'pause')
+            scroller.set_busy(True)
             elapsed = ''
             if 'elapsed' in status:
                 elapsed = float(status['elapsed'])

@@ -14,6 +14,8 @@ class Scroller:
         self.separator = ' +++ '
         self.paused = False
         self.paused_loop = 0
+        self.busy = False
+        self.busy_loop = 0
         self.elapsed = ''
         
         self.lines = []
@@ -106,6 +108,9 @@ class Scroller:
     def set_paused(self, paused):
         self.paused = paused
         
+    def set_busy(self, busy):
+        self.busy = busy
+        
     def set_elapsed(self, elapsed):
         self.elapsed = elapsed
             
@@ -149,6 +154,12 @@ class Scroller:
                 cropped += ' ' * self.width
                 cropped = cropped[offset:(offset + self.width)]
                     
+                if i == 0:
+                    if self.busy:
+                        cropped = cropped[:-2]
+                        self.busy_loop = (self.busy_loop + 1) % 4
+                        cropped += ' '
+                        cropped += '/-\\|'[self.busy_loop]
                 if i == 1:
                     if self.paused:
                         cropped = cropped[:-3]
