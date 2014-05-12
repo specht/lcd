@@ -92,6 +92,8 @@ def sync_files():
         print("Starting sync_files...")
         syncing = True
         
+        changed_something = False
+        # add new files to cache
         for path in files:
             remote_path = '/home/pi/music/' + path
             cached_path = '/home/pi/music/' + path.replace('nfs/', 'cache/')
@@ -101,7 +103,12 @@ def sync_files():
                     os.makedirs(dirname)
                 print("Caching %s..." % remote_path)
                 shutil.copy2(remote_path, cached_path)
-                    
+                changed_something = True
+                
+        # TODO: remove unused files if space becomes low
+                
+        if changed_something:
+            os.system("mpc update cache")
         
         print("Finished sync_files.")
         syncing = False
