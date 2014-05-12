@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 
 while True:
-    system("python mt.py")
+    os.system("python mt.py")
