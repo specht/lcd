@@ -159,7 +159,7 @@ class Scroller:
                         cropped = cropped[:-2]
                         self.busy_loop = (self.busy_loop + 1) % 4
                         cropped += ' '
-                        cropped += '/-\\|'[self.busy_loop]
+                        cropped += '/-' + u'\x01'.encode('latin-1') + '|'[self.busy_loop]
                 if i == 1:
                     if self.paused:
                         cropped = cropped[:-3]
