@@ -81,6 +81,7 @@ hotkeys = ['KEY_MAIL', 'KEY_HOMEPAGE', 'KEY_LEFTALT/KEY_F4',
 
 def sync_files():
     #scroller.set_busy(True)
+    global syncing
     print("Starting sync_files...")
     syncing = True
     time.sleep(5.0)
@@ -309,7 +310,7 @@ def output_handler():
     last_show_menu = False
     while True:
         try:
-            global mouse_movement, launch_playlist, hotkey_map, menu_showing, last_menu_showing, playlists, playlists_index
+            global mouse_movement, launch_playlist, hotkey_map, menu_showing, last_menu_showing, playlists, playlists_index, syncing
             # -----------------------------------------
             mpd_lock.acquire()
             playlist_entries = len(mpd.playlist())
