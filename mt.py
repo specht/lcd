@@ -469,7 +469,7 @@ def output_handler():
         except:
             raise
             pass
-        time.sleep(0.1)
+        time.sleep(0.05)
             
 
 for x in [input_handler, output_handler]:
