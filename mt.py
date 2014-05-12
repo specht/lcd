@@ -22,7 +22,12 @@ HOST = 'localhost'
 mpd = MPDClient()
 mpd.timeout = 10
 mpd.idletimeout = None
-mpd.connect(HOST, 6600)
+while True:
+    try:
+        mpd.connect(HOST, 6600)
+        break
+    except:
+        print("Trying again...")
 
 #print("\n".join(dir(mpd)))
 #print(mpd.status())
@@ -235,8 +240,7 @@ def input_handler():
                                     mpd_lock.acquire()
                                     try:
                                         handle_keys(tag, data.keystate)
-                                    except e:
-                                        print(e)
+                                    except:
                                         raise
                                         pass
                                     finally:
@@ -265,7 +269,9 @@ def input_handler():
                                 mouse_movement_lock.release()
                             
         except:
-            os._exit(1)
+            print("Darn!")
+            raise
+            time.sleep(5.0)
             
 def sorter(a, b):
     a = a.lower()
@@ -461,7 +467,8 @@ def output_handler():
             
             #print(current_song)
         except:
-            os._exit(2)
+            raise
+            pass
         time.sleep(0.1)
             
 
