@@ -61,8 +61,9 @@ class Scroller:
             elif ord(c) == 169:
                 result += '(c)'.encode('latin-1')
             else:
-                print(c)
-                print(ord(c))
+                pass
+                #print(c)
+                #print(ord(c))
         return result
             
     def load_ascii_art(self):
