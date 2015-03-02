@@ -40,7 +40,7 @@ class Scroller:
         self.lcd = Adafruit_CharLCD()
         self.lcd.begin(40, 2)
         self.lcd.define_char(1, [0, 0x10, 0x08, 0x04, 0x02, 0x01, 0, 0])
-        self.lcd.define_char(2, [31, 31, 31, 31, 31, 31, 31, 31])
+        self.lcd.define_char(2, [0, 31, 14, 4, 21, 10, 0, 0])
         self.current_lines = ["", ""]
     
     def tr(self, s):
@@ -173,9 +173,11 @@ class Scroller:
                             #cropped = cropped[:-(len(self.elapsed) + 2)]
                             #cropped += "|%s" % self.elapsed
 
-                cropped = cropped[:-2]
-                cropped += ' '
-                cropped += u'\x02'.encode('latin-1')
+                if i == 0:
+                    cropped = cropped[:-2]
+                    cropped += ' '
+                    cropped += u'\x02'.encode('latin-1')
+
                 result_lines.append(cropped)
         #os.system("clear")
         #self.lcd.clear()
