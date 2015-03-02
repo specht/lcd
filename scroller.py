@@ -176,6 +176,10 @@ class Scroller:
                 if i == 0:
                     cropped = cropped[:-2]
                     cropped += ' '
+                    cropped += '"'
+                if i == 1:
+                    cropped = cropped[:-2]
+                    cropped += ' '
                     cropped += u'\x02'.encode('latin-1')
 
                 result_lines.append(cropped)
